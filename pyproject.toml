@@ -30,6 +30,7 @@ build-backend = "maturin"
 [dependency-groups]
 dev = [
     "pyarrow-stubs>=17.16",
+    "pytest-cov>=6.0.0",
     "pytest>=8.3.4",
     "ruff>=0.9.2",
 ]

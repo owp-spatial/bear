@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import bear.core.static
-from bear.typing import staticproperty
 
 from importlib.resources import files
 from typing import Any, Generator, overload, Sequence, Optional
@@ -137,7 +136,7 @@ class FIPS:
     _states: dict[int, USState] = {}
     _stree: STRtree
 
-    @staticproperty
+    @staticmethod
     def epsg() -> int:
         return 5070
 
@@ -151,7 +150,7 @@ class FIPS:
             return
 
         path = f"GeoJSONSeq:/vsigzip/{str(files(bear.core.static) / 'fips.geojson.gz')}"
-        gdf = gpd.read_file(path).to_crs(epsg=cls.epsg)
+        gdf = gpd.read_file(path).to_crs(epsg=cls.epsg())
         for row in gdf.itertuples(index=False, name=None):
             # (0, fips); (1, name); (2, state); (3, abbr); (4, geometry)
             statefp: int = int(row[0][:2])
