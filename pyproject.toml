@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "geopandas>=1.0.1",
+    "polars>=1.20.0",
     "pyarrow>=19.0.0",
     "shapely>=2.0.6",
 ]
