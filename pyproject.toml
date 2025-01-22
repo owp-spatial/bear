@@ -1,0 +1,21 @@
+[project]
+name = "bear"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Justin Singh-Mohudpur", email = "justin.singh-mohudpur@noaa.gov" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+bear = "bear:main"
+
+[tool.maturin]
+module-name = "bear._core"
+python-packages = ["bear"]
+python-source = "src"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
