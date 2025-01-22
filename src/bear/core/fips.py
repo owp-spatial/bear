@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bear.core.static
+from bear.typing import staticproperty
 
 from importlib.resources import files
 from typing import Any, Generator, overload, Sequence, Optional
@@ -136,8 +137,8 @@ class FIPS:
     _states: dict[int, USState] = {}
     _stree: STRtree
 
-    @classmethod
-    def epsg(cls) -> int:
+    @staticproperty
+    def epsg() -> int:
         return 5070
 
     @classmethod
