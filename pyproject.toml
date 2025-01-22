@@ -12,7 +12,7 @@ dependencies = [
     "geopandas>=1.0.1",
     "polars>=1.20.0",
     "pyarrow>=19.0.0",
-    "shapely>=2.0.6",
+    "shapely>=2.1.0.dev0",
 ]
 
 [project.urls]
@@ -47,3 +47,6 @@ indent-width = 4
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.uv.sources]
+shapely = { git = "https://github.com/shapely/shapely" }
