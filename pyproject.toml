@@ -1,6 +1,7 @@
 [project]
 name = "bear"
 description = "Built Environment Asset Registry (BEAR)"
+readme = "README.md"
 dynamic = ["version"]
 authors = [
     { name = "Justin Singh-Mohudpur", email = "justin.singh-mohudpur@noaa.gov" },
