@@ -1,5 +1,8 @@
 # Custom
 
+# VS Code files
+.vscode
+
 # User-private files
 .private
 
