@@ -1,6 +1,14 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 jobs:
   build:
