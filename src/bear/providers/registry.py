@@ -1,5 +1,6 @@
 from bear.typing import Provider
 from typing import KeysView, ItemsView
+from collections.abc import Callable
 
 
 class ProviderRegistryMeta(type):
@@ -56,6 +57,8 @@ class ProviderRegistry(metaclass=ProviderRegistryMeta):
             If `overwrite` if False and `name` already exists in the registry.
         """
 
+        assert isinstance(provider, Provider)
+
         if name in ProviderRegistry._registry and not overwrite:
             raise KeyError(f"Provider with name {name} already registered.")
 
@@ -103,4 +106,40 @@ class ProviderRegistry(metaclass=ProviderRegistryMeta):
         return ProviderRegistry._registry[key]
 
 
-__all__ = ("ProviderRegistry",)
+def register_provider(name: str, /, **kwargs) -> Callable[[Provider], Provider]:
+    """Decorator for registering a Provider class within the registry.
+
+    Parameters
+    ----------
+    name : str
+        Key/name to register provider under.
+    **kwargs
+        Keywords arguments passed to `ProviderRegistry.register`
+
+    Returns
+    -------
+    Callable[[Provider], Provider]
+
+    Example
+    -------
+    Using the decorator::
+
+        @register_provider("my_provider")
+        class MyProvider(Provider):
+            ...
+
+    Is equivalent to::
+
+        class MyProvider(Provider):
+            ...
+        ProviderRegistry.register("my_provider", MyProvider)
+    """
+
+    def register_provider_decorator(cls: Provider):
+        ProviderRegistry.register(name, cls, **kwargs)
+        return cls
+
+    return register_provider_decorator
+
+
+__all__ = ("ProviderRegistry", "register_provider")

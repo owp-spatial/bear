@@ -24,14 +24,14 @@ class Provider(Protocol):
     to be considered a Provider.
     """
 
-    @staticmethod
-    def epsg() -> int: ...
+    @classmethod
+    def epsg(cls) -> int: ...
 
-    @staticmethod
-    def base_schema() -> Optional[ArrowSchema]: ...
+    @classmethod
+    def schema(cls) -> Optional[ArrowSchema]: ...
 
-    @staticmethod
-    def read(county: USCounty, *args, **kwargs) -> ArrowBatchGenerator:
+    @classmethod
+    def read(cls, county: USCounty, *args, **kwargs) -> ArrowBatchGenerator:
         """Read provider data via a pyarrow.RecordBatch generator
 
         Parameters
@@ -50,8 +50,8 @@ class Provider(Protocol):
         """
         ...
 
-    @staticmethod
-    def conform(lf: LazyFrame, *args, **kwargs) -> LazyFrame:
+    @classmethod
+    def conform(cls, lf: LazyFrame, *args, **kwargs) -> LazyFrame:
         """Conform function definition
 
         Parameters
