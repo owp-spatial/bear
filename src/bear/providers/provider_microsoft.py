@@ -11,10 +11,10 @@ from bear.providers.registry import register_provider
 
 @register_provider("microsoft")
 class MicrosoftProvider(Provider):
-    """`Microsoft Building Footprints <https://github.com/microsoft/GlobalMLBuildingFootprints>`_ Provider
+    """[Microsoft Building Footprints](https://github.com/microsoft/GlobalMLBuildingFootprints) Provider
 
-    This data is licensed by Microsoft under the `Open Data Commons
-    Open Database License (ODbL) <https://opendatacommons.org/licenses/odbl/>`_.
+    This data is licensed by Microsoft under the [Open Data Commons
+    Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/>).
     """
 
     @classmethod

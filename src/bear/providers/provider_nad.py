@@ -11,11 +11,11 @@ from bear.providers.registry import register_provider
 
 @register_provider("nad")
 class NADProvider(Provider):
-    """`National Address Database (NAD) <https://www.transportation.gov/gis/national-address-database>`_ Provider
+    """[National Address Database (NAD)](https://www.transportation.gov/gis/national-address-database) Provider
 
     This data is a work of the federal government and is not subject to copyright protection
     in accordance with 17 U.S.C. § 105. It is available for re-use without limitation or restriction.
-    See the `NAD disclaimer <https://www.transportation.gov/mission/open/gis/national-address-database/national-address-database-nad-disclaimer>`_
+    See the [NAD disclaimer](https://www.transportation.gov/mission/open/gis/national-address-database/national-address-database-nad-disclaimer)
     for more details.
     """
 

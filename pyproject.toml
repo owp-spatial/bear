@@ -12,7 +12,7 @@ dependencies = [
     "geopandas>=1.0.1",
     "polars>=1.20.0",
     "pyarrow>=19.0.0",
-    "shapely>=2.1.0.dev0",
+    "shapely>=2.0.6",
 ]
 
 [project.urls]
@@ -35,6 +35,9 @@ dev = [
     "pytest>=8.3.4",
     "ruff>=0.9.2",
 ]
+docs = [
+    "quartodoc>=0.9.1",
+]
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
@@ -47,6 +50,3 @@ indent-width = 4
 
 [tool.ruff.format]
 quote-style = "double"
-
-[tool.uv.sources]
-shapely = { git = "https://github.com/shapely/shapely" }

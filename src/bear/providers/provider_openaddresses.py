@@ -11,7 +11,7 @@ from bear.providers.registry import register_provider
 
 @register_provider("openaddresses")
 class OpenAddressesProvider(Provider):
-    """`OpenAddresses <https://openaddresses.io/>`_ Provider
+    """[OpenAddresses](https://openaddresses.io/) Provider
 
     The datasets provided by OpenAddresses are individually licensed.
     Most are available under open licenses, but there is no guarantee.

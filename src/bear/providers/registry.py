@@ -20,14 +20,18 @@ class ProviderRegistry(metaclass=ProviderRegistryMeta):
     registered provider classes. The goal is to encapsulate provider
     modules so that access to those modules is done via this registry.
 
-    A module may register itself by calling::
+    A module may register itself by calling:
 
-        ProviderRegistry.register('mymodule', my_provider_obj)
+    ```python
+    ProviderRegistry.register('mymodule', my_provider_obj)
+    ```
 
-    Then, it can be accessed by calling::
+    Then, it can be accessed by calling:
 
-        ProviderRegistry.get('mymodule')
-        #> <my_provider_obj>
+    ```python
+    ProviderRegistry.get('mymodule')
+    #> <my_provider_obj>
+    ```
 
     The ProviderRegistry class cannot be instantiated.
     """
@@ -122,17 +126,21 @@ def register_provider(name: str, /, **kwargs) -> Callable[[Provider], Provider]:
 
     Example
     -------
-    Using the decorator::
+    Using the decorator:
 
-        @register_provider("my_provider")
-        class MyProvider(Provider):
-            ...
+    ```python
+    @register_provider("my_provider")
+    class MyProvider(Provider):
+        ...
+    ```
 
-    Is equivalent to::
+    Is equivalent to:
 
-        class MyProvider(Provider):
-            ...
-        ProviderRegistry.register("my_provider", MyProvider)
+    ```python
+    class MyProvider(Provider):
+        ...
+    ProviderRegistry.register("my_provider", MyProvider)
+    ```
     """
 
     def register_provider_decorator(cls: Provider):

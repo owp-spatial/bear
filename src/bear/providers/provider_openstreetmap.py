@@ -11,10 +11,10 @@ from bear.providers.registry import register_provider
 
 @register_provider("openstreetmap")
 class OpenStreetMapProvider(Provider):
-    """`OpenStreetMap <https://www.openstreetmap.org>`_ Provider
+    """[OpenStreetMap](https://www.openstreetmap.org) Provider
 
-    This data is licensed by the OpenStreetMap Foundation under the `Open Data Commons
-    Open Database License (ODbL) <https://opendatacommons.org/licenses/odbl/>`_.
+    This data is licensed by the OpenStreetMap Foundation under the [Open Data Commons
+    Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
     """
 
     @classmethod

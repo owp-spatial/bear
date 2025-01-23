@@ -11,7 +11,7 @@ from bear.providers.registry import register_provider
 
 @register_provider("usa_structures")
 class USAStructuresProvider(Provider):
-    """`USA Structures <https://gis-fema.hub.arcgis.com/pages/usa-structures>`_ Provider
+    """[USA Structures](https://gis-fema.hub.arcgis.com/pages/usa-structures) Provider
 
     The data is licensed under the Creative Commons By Attribution (CC BY 4.0) license.
     """

@@ -1,5 +1,7 @@
 # Custom
 
+/.quarto/
+
 # VS Code files
 .vscode
 
