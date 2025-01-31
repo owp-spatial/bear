@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
-use geos::{Geom, Geometry, SpatialIndex, STRtree};
+use geos::{Geometry, SpatialIndex, STRtree};
 use polars::prelude::*;
-use pyo3_polars::derive::polars_expr;
 
 pub struct TreeNode {
     pub geometry: Rc<Geometry>,

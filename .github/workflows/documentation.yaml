@@ -41,11 +41,8 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           pyproject-file: "pyproject.toml"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install the project
         run: uv sync --group docs
