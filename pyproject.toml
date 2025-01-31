@@ -17,6 +17,7 @@ dependencies = [
     "shapely>=2.0.6",
     "polars-u64-idx>=1.20.0",
     "pyogrio",
+    "pyproj>=3.7.0",
 ]
 
 [project.urls]
