@@ -48,6 +48,10 @@ addopts = ["--import-mode=importlib"]
 pythonpath = "src"
 testpaths = "tests"
 
+[tool.uv]
+required-version = ">=0.5.0"
+package = true
+
 [tool.ruff]
 line-length = 80
 indent-width = 4

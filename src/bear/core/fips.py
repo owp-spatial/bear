@@ -150,7 +150,7 @@ class FIPS:
             return
 
         path = f"GeoJSONSeq:/vsigzip/{str(files(bear.core.static) / 'fips.geojson.gz')}"
-        gdf = gpd.read_file(path).to_crs(epsg=cls.epsg())
+        gdf: gpd.GeoDataFrame = gpd.read_file(path).to_crs(epsg=cls.epsg())  # type: ignore
         for row in gdf.itertuples(index=False, name=None):
             # (0, fips); (1, name); (2, state); (3, abbr); (4, geometry)
             statefp: int = int(row[0][:2])

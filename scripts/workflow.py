@@ -7,7 +7,6 @@ import pyogrio
 from prefect import flow, task
 from prefect.futures import as_completed, wait
 from prefect.task_runners import ThreadPoolTaskRunner
-import shapely
 
 import bear.providers.provider_microsoft  # noqa
 import bear.providers.provider_nad  # noqa
