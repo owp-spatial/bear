@@ -1,6 +1,7 @@
 from typing import Optional
 
 import polars as pl
+import polars_hash as plh
 import pyarrow as pa
 
 from bear import expr
@@ -41,7 +42,7 @@ class NADProvider(Provider):
                         .then(expr.NULL)
                         .otherwise(pl.col("UUID"))
                     ),
-                    pl.col("NatGrid"),
+                    plh.col("geometry").bin.encode("base64").chash.sha256(),  # type: ignore
                 ]
             ),
             classification=(

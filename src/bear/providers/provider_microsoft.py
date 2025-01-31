@@ -1,6 +1,7 @@
 from typing import Optional
 
 import polars as pl
+import polars_hash as plh
 import pyarrow as pa
 
 from bear import expr
@@ -38,6 +39,7 @@ class MicrosoftProvider(Provider):
     @classmethod
     def conform(cls, lf: pl.LazyFrame, *args, **kwargs) -> pl.LazyFrame:
         return lf.select(
+            id=plh.col("geometry").bin.encode("base64").chash.sha256(),  # type: ignore
             classification=expr.NULL,
             address=expr.NULL,
             height=(

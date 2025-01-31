@@ -169,7 +169,7 @@ class FIPS:
 
     @classmethod
     def iterstates(cls) -> Generator[USState, None, None]:
-        return (state for state in cls._states.values())
+        yield from cls._states.values()
 
     @classmethod
     def itercounties(cls) -> Generator[USCounty, None, None]:
@@ -190,6 +190,8 @@ class FIPS:
     def query(
         cls, geometry: Geometry | Sequence[Geometry]
     ) -> Optional[USCounty] | Sequence[Optional[USCounty]]:
+        cls.initialize()
+
         indices = cls._stree.query(centroid(geometry), predicate="intersects")
 
         # Scalar Case
