@@ -10,6 +10,7 @@
 
 # User-specified directory for `uv` files (cache, etc.)
 .uv
+uv.lock
 
 # Test Coverage
 junit

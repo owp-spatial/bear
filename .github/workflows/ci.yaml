@@ -33,7 +33,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --dev
 
       # TODO(justin): test coverage
       # TODO(justin): ruff linting

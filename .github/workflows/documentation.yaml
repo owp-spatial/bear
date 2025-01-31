@@ -48,7 +48,7 @@ jobs:
           python-version-file: "pyproject.toml"
 
       - name: Install the project
-        run: uv sync --all-extras --group docs
+        run: uv sync --group docs
 
       - name: Build documentation
         run: |

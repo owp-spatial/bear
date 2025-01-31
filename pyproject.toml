@@ -12,7 +12,6 @@ dependencies = [
     "geopandas>=1.0.1",
     "polars-hash>=0.5.2",
     "polars>=1.20.0",
-    "prefect>=3.1.13",
     "pyarrow>=19.0.0",
     "shapely>=2.0.6",
     "polars-u64-idx>=1.20.0",
@@ -39,6 +38,9 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest>=8.3.4",
     "ruff>=0.9.2",
+]
+cli = [
+    "prefect>=3.1.13"
 ]
 docs = [
     "quartodoc>=0.9.1",
