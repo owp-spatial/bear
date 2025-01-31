@@ -25,10 +25,26 @@ class Provider(Protocol):
     """
 
     @classmethod
-    def epsg(cls) -> int: ...
+    def epsg(cls) -> int:
+        """Retrieve the EPSG code for this provider's data
+
+        Returns
+        -------
+        int
+            EPSG code for the underlying data.
+        """
+        ...
 
     @classmethod
-    def schema(cls) -> Optional[ArrowSchema]: ...
+    def schema(cls) -> Optional[ArrowSchema]:
+        """Optionally retrieve the schema of this provider's data
+
+        Returns
+        -------
+        Optional[ArrowSchema]
+            If supported, returns the schema of the provider's data.
+        """
+        ...
 
     @classmethod
     def read(cls, county: USCounty, *args, **kwargs) -> ArrowBatchGenerator:
