@@ -1,0 +1,63 @@
+site_name: BEAR
+site_url: https://owp-spatial.github.io/bear/
+
+repo_name: owp-spatial/bear
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.footer
+  font:
+    text: Inter
+    code: Source Code Pro
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/owp-spatial/bear
+      name: GitHub Repository
+
+    - icon: fontawesome/solid/envelope
+      link: mailto:justin.singh-mohudpur@noaa.gov
+      name: Contact
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            summary: true

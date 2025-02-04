@@ -29,9 +29,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Set up Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
-
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -48,14 +45,12 @@ jobs:
         run: uv sync --group docs
 
       - name: Build documentation
-        run: |
-          uv run quartodoc build --config docs/_quarto.yml --verbose
-          quarto render docs
+        run: uv run mkdocs build -d site
 
       - name: Upload documentation artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "docs/_build"
+          path: "site"
 
       - name: Deploy to GitHub Pages
         id: deployment
