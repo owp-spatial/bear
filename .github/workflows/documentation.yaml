@@ -44,17 +44,6 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Install libpostal
-        run: |
-          git clone https://github.com/openvenues/libpostal
-          cd libpostal
-          ./bootstrap.sh
-
-          mkdir -p /libpostal/
-          ./configure --datadir=/libpostal/
-          sudo make -j8
-          sudo make install
-
       - name: Install the project
         run: uv sync --group docs
 
