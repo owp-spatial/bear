@@ -35,8 +35,8 @@ jobs:
           cd libpostal
           ./bootstrap.sh
 
-          mkdir -p .private/libpostal
-          ./configure --datadir=.private/libpostal
+          mkdir -p /libpostal/
+          ./configure --datadir=/libpostal/
           sudo make -j8
           sudo make install
 
