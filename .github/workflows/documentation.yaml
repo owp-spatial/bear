@@ -45,7 +45,7 @@ jobs:
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install libpostal
-        run: >
+        run: |
           git clone https://github.com/openvenues/libpostal
           cd libpostal
           ./bootstrap.sh
