@@ -1,7 +1,7 @@
 import polars as pl
 from polars._typing import IntoExpr
 
-from postal.expand import expand_address
+from scourgify import normalize_address_record
 
 from dataclasses import dataclass
 from typing import Iterable
@@ -16,17 +16,23 @@ class JoinArgs:
 
 
 def addr_normalize(s: str) -> str:
-    result = expand_address(
-        s,
-        languages="en",
-        lowercase=True,
-        trim_string=True,
-    )
+    try:
+        result: dict[str, str] = dict(
+            **normalize_address_record(s, long_hand=True)
+        )
+    except Exception:
+        return ""
+
+    if result["address_line_1"] is None:
+        result["address_line_1"] = ""
+
+    if result["address_line_2"] is None:
+        result["address_line_2"] = ""
 
     if len(result) == 0:
         return ""
     else:
-        return result[0]
+        return " ".join([result["address_line_1"], result["address_line_2"]])
 
 
 def sc_initialize_lazy(
@@ -349,8 +355,7 @@ def merge_footprints_and_addresses(
         .select(
             pl.col("id_right").alias("id"),
             pl.col("provider_right").alias("provider"),
-            pl.col("id_left").alias("footprint_id"),
-            pl.col("provider_left").alias("footprint_provider"),
+            pl.col("id_left").alias("tmp"),
             *("classification", "address", "height", "levels", "foreign"),
             # When the point is ON the footprint surface, we use that (i.e. units),
             # otherwise, we use the footprint centroid (i.e. when address is in front of structure)
@@ -364,8 +369,6 @@ def merge_footprints_and_addresses(
     select_cols = (
         "id",
         "provider",
-        "footprint_id",
-        "footprint_provider",
         "classification",
         "address",
         "height",
@@ -376,22 +379,16 @@ def merge_footprints_and_addresses(
 
     # Get unmatched rows from left data frame
     footprints_missing = sc_anti_join(
-        footprints.with_columns(
-            footprint_id=pl.col("id"),
-            footprint_provider=pl.col("provider"),
-        ),
+        footprints,
         merged,
         select_cols,
         left_on="id",
-        right_on="footprint_id",
+        right_on="tmp",
     )  # TODO to centroid
 
     # Get unmatched rows from right data frame
     addresses_missing = sc_anti_join(
-        addresses.with_columns(
-            footprint_id=pl.lit(None),
-            footprint_provider=pl.lit(None),
-        ),
+        addresses,
         merged,
         select_cols,
         left_on="id",
@@ -400,7 +397,7 @@ def merge_footprints_and_addresses(
 
     merged = (
         pl.concat(
-            (merged, footprints_missing, addresses_missing),
+            (merged.drop("tmp"), footprints_missing, addresses_missing),
             how="vertical",
         )
         .with_columns(
@@ -415,6 +412,8 @@ def merge_footprints_and_addresses(
                 addr_normalize,
                 return_dtype=pl.String(),
             )
+            .replace("", pl.lit(None))
+            .str.to_lowercase()
         )
         .with_columns(geometry=udf.centroid("geometry"))
         .select(pl.all().first().over("address", order_by="provider"))
@@ -433,7 +432,9 @@ def merge_footprints_and_addresses(
                     )
                 ),
             ),
+            id=pl.col("geometry").pipe(udf.pluscodes),
         )
+        .drop("provider")
     )
 
     return merged

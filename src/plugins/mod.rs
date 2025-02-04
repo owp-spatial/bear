@@ -1,6 +1,6 @@
 mod geoarray;
 
-use geo::Centroid;
+use geo::{proj::Proj, Centroid, Convert, Point, Transform};
 use geoarray::GeoArray;
 
 use polars::prelude::*;
@@ -128,4 +128,25 @@ fn unary_explode_multipolygon(inputs: &[Series]) -> PolarsResult<Series> {
         .explode_multipolygon()
         .to_wkb()
         .into_series())
+}
+
+#[polars_expr(output_type=String)]
+fn unary_pluscode(inputs: &[Series]) -> PolarsResult<Series> {
+    let proj = Proj::new_known_crs("EPSG:5070", "EPSG:4326", None).unwrap();
+
+    let result: StringChunked = unary_input(inputs)?
+        .centroid()
+        .iter()
+        .map(|(g, ok)| {
+            if ok {
+                let pt: Point = g.convert().try_into().unwrap();
+                let latlon = pt.transformed(&proj).unwrap().x_y();
+                Some(open_location_code::encode(latlon.into(), 13))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok(result.into_series())
 }

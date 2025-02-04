@@ -97,3 +97,12 @@ def explode_multipolygon(expr: IntoExpr) -> Expr:
         is_elementwise=True,
         changes_length=True,
     )
+
+
+def pluscodes(expr: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="unary_pluscode",
+        args=expr,
+        is_elementwise=True,
+    )

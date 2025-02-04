@@ -17,7 +17,7 @@ dependencies = [
     "polars-u64-idx>=1.20.0",
     "pyogrio",
     "pyproj>=3.7.0",
-    "postal>=1.1.10",
+    "usaddress-scourgify>=0.6.0",
 ]
 
 [project.urls]
