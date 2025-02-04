@@ -47,7 +47,7 @@ class ConformTask:
 
 
 @task
-def conform_load(spec: ConformTask) -> tuple[ConformTask, pl.DataFrame]:
+def conform_load(spec: ConformTask) -> tuple[ConformTask, pl.DataFrame | None]:
     input_path = spec.input()
 
     # Workaround until
@@ -68,11 +68,19 @@ def conform_load(spec: ConformTask) -> tuple[ConformTask, pl.DataFrame]:
 
     assert isinstance(tbl, pl.DataFrame)
 
-    return spec, spec.provider.conform(tbl.lazy()).collect()
+    if tbl.height > 0:
+        tbl = spec.provider.conform(tbl.lazy()).collect(streaming=True)
+    else:
+        tbl = None
+
+    return spec, tbl
 
 
 @task
-def conform_save(spec: ConformTask, tbl: pl.DataFrame) -> None:
+def conform_save(spec: ConformTask, tbl: pl.DataFrame | None) -> None:
+    if tbl is None:
+        return
+
     output_path = spec.output()
     if output_path.exists():
         return
@@ -125,4 +133,4 @@ def conflate(fips: str):
 if __name__ == "__main__":
     FIPS.initialize()
     providers = ProviderRegistry.providers()
-    conform("37129", providers)
+    conform("06067", providers)

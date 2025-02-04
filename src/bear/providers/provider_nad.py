@@ -35,15 +35,12 @@ class NADProvider(Provider):
     @classmethod
     def conform(cls, lf: pl.LazyFrame, *args, **kwargs) -> pl.LazyFrame:
         return lf.select(
-            id=pl.coalesce(
-                [
-                    (
-                        pl.when(pl.col("UUID").eq(expr.NULL_UUID))
-                        .then(expr.NULL)
-                        .otherwise(pl.col("UUID"))
-                    ),
-                    plh.col("geometry").bin.encode("base64").chash.sha256(),  # type: ignore
-                ]
+            id=(
+                pl.when(pl.col("UUID").eq(expr.NULL_UUID))
+                .then(
+                    plh.col("geometry").bin.encode("base64").chash.sha256()  # type: ignore
+                )
+                .otherwise(pl.col("UUID"))
             ),
             classification=(
                 pl.when(pl.col("Addr_Type").is_in(["Unknown", "Other"]))

@@ -1,52 +1,131 @@
-mod corresponds;
-mod intersects;
-mod utils;
+mod geoarray;
 
-use geos::{Geom, Geometry};
+use geo::Centroid;
+use geoarray::GeoArray;
+
 use polars::prelude::*;
 use pyo3_polars::derive::polars_expr;
-use utils::GeoArray;
+
+fn unary_input(inputs: &[Series]) -> PolarsResult<GeoArray> {
+    let a: &BinaryChunked = inputs[0].binary()?;
+    Ok(a.into())
+}
+
+fn binary_inputs(inputs: &[Series]) -> PolarsResult<(GeoArray, GeoArray)> {
+    let a: &BinaryChunked = inputs[0].binary()?;
+    let b: &BinaryChunked = inputs[1].binary()?;
+
+    Ok((a.into(), b.into()))
+}
+
+fn intersects_output_type(fields: &[Field]) -> PolarsResult<Field> {
+    let field = Field::new(
+        fields[0].name.clone(),
+        DataType::List(DataType::Int64.boxed()),
+    );
+
+    Ok(field.clone())
+}
+
+/// Perform an aggregated intersects operation between two
+/// Polars Series. The resulting Series has equal length to
+/// the left input, and a spatial index of the right Series is used
+/// to determine intersecting geometries.
+#[polars_expr(output_type_func=intersects_output_type)]
+fn binary_intersects_aggregate(inputs: &[Series]) -> PolarsResult<Series> {
+    let (a, b) = binary_inputs(inputs)?;
+    let series = a.intersects_agg(&b).into_series();
+
+    let a_len = a.values.len();
+    let b_len = b.values.len();
+    let c_len = a_len.max(b_len);
+    let remaining = c_len.abs_diff(a_len);
+
+    series.extend_constant(AnyValue::Null, remaining)
+}
+
+/// Perform an aggregated nearest neighbor operation between
+/// two Polars Series. The resulting Series has equal length to
+/// the left input, and a spatial index of the right Series is used
+/// to determine neighboring geometries.
+#[polars_expr(output_type_func=intersects_output_type)]
+fn binary_nearest_aggregate(inputs: &[Series]) -> PolarsResult<Series> {
+    let (a, b) = binary_inputs(inputs)?;
+    let series = a.nearest_within_agg(&b).into_series();
+
+    let a_len = a.values.len();
+    let b_len = b.values.len();
+    let c_len = a_len.max(b_len);
+    let remaining = c_len.abs_diff(a_len);
+
+    series.extend_constant(AnyValue::Null, remaining)
+}
+
+/// Perfom an elementwise intersection between equal length WKB Series.
+#[polars_expr(output_type=Binary)]
+fn binary_intersection_elementwise(inputs: &[Series]) -> PolarsResult<Series> {
+    let (a, b) = binary_inputs(inputs)?;
+    Ok(a.intersection_elementwise(&b).into())
+}
+
+/// Compute the area of each geometry in a WKB Series.
+#[polars_expr(output_type=Float64)]
+fn unary_area_elementwise(inputs: &[Series]) -> PolarsResult<Series> {
+    Ok(unary_input(inputs)?.area().into_series())
+}
+
+/// Compute the (elementwise) distance between geometries.
+#[polars_expr(output_type=Float64)]
+fn binary_distance_elementwise(inputs: &[Series]) -> PolarsResult<Series> {
+    let (a, b) = binary_inputs(inputs)?;
+    Ok(a.distance_elementwise(&b).into_series())
+}
+
+#[polars_expr(output_type=Float64)]
+fn unary_x(inputs: &[Series]) -> PolarsResult<Series> {
+    unary_input(inputs)?
+        .iter()
+        .map(|(g, ok)| {
+            if ok {
+                Ok(g.centroid().unwrap().x())
+            } else {
+                Ok(f64::NAN)
+            }
+        })
+        .collect()
+}
+
+#[polars_expr(output_type=Float64)]
+fn unary_y(inputs: &[Series]) -> PolarsResult<Series> {
+    unary_input(inputs)?
+        .iter()
+        .map(|(g, ok)| {
+            if ok {
+                Ok(g.centroid().unwrap().y())
+            } else {
+                Ok(f64::NAN)
+            }
+        })
+        .collect()
+}
 
 #[polars_expr(output_type=Binary)]
-fn intersection(inputs: &[Series]) -> PolarsResult<Series> {
-    let a = inputs[0].binary()?;
-    let b = inputs[0].binary()?;
-
-    let result: BinaryChunked = arity::broadcast_binary_elementwise_values(a, b, |a, b| {
-        let a = Geometry::new_from_wkb(a).unwrap();
-        let b = Geometry::new_from_wkb(b).unwrap();
-        let c = a.intersection(&b).unwrap().to_wkb().unwrap();
-
-        Into::<Vec<u8>>::into(c)
-    });
-
-    Ok(result.into_series())
+fn unary_centroid(inputs: &[Series]) -> PolarsResult<Series> {
+    Ok(unary_input(inputs)?.centroid().to_wkb().into_series())
 }
 
-#[polars_expr(output_type=Float64)]
-fn distance(inputs: &[Series]) -> PolarsResult<Series> {
-    let a = inputs[0].binary()?;
-    let b = inputs[0].binary()?;
-
-    let result: Float64Chunked = arity::broadcast_binary_elementwise_values(a, b, |a, b| {
-        let a = Geometry::new_from_wkb(a).unwrap();
-        let b = Geometry::new_from_wkb(b).unwrap();
-        a.distance(&b).unwrap()
-    });
-
-    Ok(result.into_series())
+#[polars_expr(output_type=Binary)]
+fn unary_explode_multipoint(inputs: &[Series]) -> PolarsResult<Series> {
+    Ok(unary_input(inputs)?
+        .explode_multipoint()
+        .to_wkb()
+        .into_series())
 }
 
-#[polars_expr(output_type=Float64)]
-fn area(inputs: &[Series]) -> PolarsResult<Series> {
-    let input: GeoArray = inputs[0].binary()?.into();
-
-    let result: Vec<f64> = input.data.into_iter().map(|geom| {
-        match geom {
-            Some(g) => g.area().unwrap_or(0.0),
-            None => 0.0
-        }
-    }).collect();
-
-    Ok(Float64Chunked::from_vec("".into(), result).into_series())
+#[polars_expr(output_type=Binary)]
+fn unary_explode_multipolygon(inputs: &[Series]) -> PolarsResult<Series> {
+    Ok(unary_input(inputs)?
+        .explode_multipolygon()
+        .to_wkb()
+        .into_series())
 }

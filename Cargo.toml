@@ -9,7 +9,11 @@ name = "_plugins"
 crate-type = ["cdylib"]
 
 [dependencies]
+geo = "0.29.3"
+geo-index = { version = "0.2.0", features = ["rayon"] }
+geo-traits = "0.2.0"
 geos = { version = "9.1.1", features = ["static"] }
+geozero = { version = "0.14.0", features = ["with-geos", "with-wkb"] }
 polars = { version = "*", features=["performant", "cse"]  }
 polars-arrow = { version = "*" }
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
@@ -17,3 +21,4 @@ polars-arrow = { version = "*" }
 pyo3 = { version = "0.22.4", features = ["extension-module", "abi3-py39"] }
 pyo3-polars = { version = "*", features = ["derive"] }
 serde = { version = "*", features = ["derive"] }
+wkb = "0.8.0"

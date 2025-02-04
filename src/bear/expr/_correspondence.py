@@ -1,6 +1,8 @@
 import polars as pl
 from polars._typing import IntoExpr
 
+from postal.expand import expand_address
+
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -13,11 +15,18 @@ class JoinArgs:
     geometry: str = "geometry"
 
 
-def sc_initialize_listcol(name: str):
-    return pl.coalesce(
-        pl.selectors.matches(name),
-        pl.lit([], pl.List(pl.String())),
+def addr_normalize(s: str) -> str:
+    result = expand_address(
+        s,
+        languages="en",
+        lowercase=True,
+        trim_string=True,
     )
+
+    if len(result) == 0:
+        return ""
+    else:
+        return result[0]
 
 
 def sc_initialize_lazy(
@@ -25,13 +34,25 @@ def sc_initialize_lazy(
     args: JoinArgs,
     suffix: str,
     *,
-    row_index_name="__row_index__",
+    row_index_name="index",
 ) -> pl.LazyFrame:
     return (
         lf.with_row_index(row_index_name)
         .with_columns(
-            foreign=sc_initialize_listcol("foreign"),
-            providers=sc_initialize_listcol("providers"),
+            foreign=pl.coalesce(
+                pl.col("^foreign$"),
+                pl.lit(
+                    [],
+                    dtype=pl.List(
+                        pl.Struct(
+                            {
+                                "provider": pl.String(),
+                                "key": pl.String(),
+                            }
+                        )
+                    ),
+                ),
+            ),
         )
         .rename({args.geometry: "geometry", args.id: "id"})
         .select(pl.all().name.suffix(suffix))
@@ -47,22 +68,24 @@ def sc_correspond_overlap(
     left_col: IntoExpr,
     right_col: IntoExpr,
     *,
-    column_name: str = "__corresponds__",
+    column_name: str = "corresponds",
     threshold: IntoExpr = 0.3,
 ) -> pl.LazyFrame:
-    return lf.with_columns(
-        # Intersection Area
-        udf.area(udf.intersection(left_col, right_col)).alias(
-            "area_intersection"
-        ),
-        # Relative Area
-        pl.min_horizontal(udf.area(left_col), udf.area(right_col)).alias(
-            "area_relative"
-        ),
-    ).with_columns(
-        (
-            (pl.col("area_intersection") / pl.col("area_relative")) > threshold
-        ).alias(column_name)
+    return (
+        lf.with_columns(
+            # Intersection Area
+            udf.area(udf.intersection(left_col, right_col)).alias(
+                "area_intersection"
+            ),
+            # Relative Area
+            pl.min_horizontal(udf.area(left_col), udf.area(right_col)).alias(
+                "area_relative"
+            ),
+        )
+        .with_columns(
+            metric=(pl.col("area_intersection") / pl.col("area_relative"))
+        )
+        .with_columns((pl.col("metric") > threshold).alias(column_name))
     )
 
 
@@ -71,12 +94,12 @@ def sc_correspond_distance(
     left_col: IntoExpr,
     right_col: IntoExpr,
     *,
-    column_name: str = "__corresponds__",
+    column_name: str = "corresponds",
     threshold: IntoExpr = 10,
 ) -> pl.LazyFrame:
     return lf.with_columns(
-        (udf.distance(left_col, right_col) < threshold).alias(column_name)
-    )
+        metric=udf.distance(left_col, right_col)
+    ).with_columns((pl.col("metric") < threshold).alias(column_name))
 
 
 def sc_anti_join(
@@ -90,8 +113,20 @@ def sc_anti_join(
     return (
         origin.join(joined, **join_kwargs)
         .with_columns(
-            foreign=sc_initialize_listcol("foreign"),
-            providers=sc_initialize_listcol("providers"),
+            foreign=pl.coalesce(
+                pl.col("^foreign$"),
+                pl.lit(
+                    [],
+                    dtype=pl.List(
+                        pl.Struct(
+                            {
+                                "provider": pl.String(),
+                                "key": pl.String(),
+                            }
+                        )
+                    ),
+                ),
+            ),
         )
         .select(*select)
     )
@@ -130,65 +165,97 @@ def spatial_correspondence(
     lhs = sc_initialize_lazy(left, left_args, "_left")
     rhs = sc_initialize_lazy(right, right_args, "_right")
 
-    intersected = (
-        lhs.with_columns(
-            udf.intersects(
-                pl.col("geometry_left"),
-                # TODO(justin): we have to collect here because
-                # out-of-context columns are not pullable from LazyFrames.
-                # Therefore, this needs to be a materialized Series (as far as I know).
-                #
-                # Maybe there is a better way to optimize this so that we can
-                # fully express this in terms of lazy computation?
-                rhs.select("geometry_right").collect(streaming=True)[
-                    "geometry_right"
-                ],
-            ).alias("__row_index___right")
-        )
-        .explode("__row_index___right")
-        .join(
-            rhs,
-            how="left",
-            on="__row_index___right",
-        )
+    udf_join_indices = udf.nearest if use_distance else udf.intersects
+    udf_corresponds = (
+        sc_correspond_distance if use_distance else sc_correspond_overlap
     )
 
-    if use_distance:
-        intersected = sc_correspond_distance(
-            intersected, pl.col("geometry_left"), pl.col("geometry_right")
-        )
-    else:
-        intersected = sc_correspond_overlap(
-            intersected, pl.col("geometry_left"), pl.col("geometry_right")
-        )
-
     intersected = (
-        intersected.filter("__corresponds__")
-        .drop("__corresponds__", "geometry_right")
+        # Join RHS geometry onto LHS so that RHS geometry is
+        # in lazy context of LHS data frame.
+        pl.concat(
+            (
+                lhs,
+                rhs.select("geometry_right").filter(
+                    pl.col("geometry_right").is_not_null()
+                ),
+            ),
+            how="horizontal",
+        )
+        # Retrieve join indices for (non-null) LHS geometry.
+        # `index_right` is a `list[i64]` column where for each
+        # row `i`, each integer `j` of the list represents a
+        # row index in RHS, such that
+        #
+        #     corresponds(LHS[i], RHS[j]) == true
+        #
+        .with_columns(
+            pl.col("geometry_left")
+            .drop_nulls()
+            .pipe(udf_join_indices, pl.col("geometry_right"))
+            .alias("index_right")
+        )
+        # Convert list column to integer column, adding more rows to data frame
+        .explode("index_right")
+        # RHS geometry is not needed anymore since we have the indices
+        .drop("geometry_right")
+        # We may have NULL LHS indices, since height(RHS) might be larger than height(LHS)
+        .filter(pl.col("index_left").is_not_null())
+        # inner-join RHS columns (including geometry) onto LHS based on indices
+        .join(rhs, how="inner", on="index_right")
+        .filter(pl.col("index_right").is_not_null())
+        # Apply correspondence function (overlaps or distance) to ensure correspondence
+        # and filter to only corresponding rows
+        .pipe(
+            udf_corresponds,
+            pl.col("geometry_left"),
+            pl.col("geometry_right"),
+        )
+        .filter("corresponds")
+        # Below handles tied observations
+        # > .filter(
+        # >     pl.col("metric")
+        # >     == (
+        # >         pl.col("metric").min().over("id_left")
+        # >         if use_distance
+        # >         else pl.col("metric").max().over("id_left")
+        # >     )
+        # > )
+        # Below does not handle tied observations
+        # .group_by("index_left")
+        # .agg(
+        #     pl.all()
+        #     .sort_by("metric", descending=not use_distance, nulls_last=True)
+        #     .first()
+        # )
+        # ---------------
+        .drop("corresponds", "geometry_right")
+        # At this point, we have a data frame that contains only the
+        # geometries between LHS and RHS that have some correspondence.
+        # The following expressions clean the code to conform to the base schema.
         .with_columns(
             classification=sc_coalesce_attr("classification"),
             address=sc_coalesce_attr("address"),
             height=sc_coalesce_attr("height"),
             levels=sc_coalesce_attr("levels"),
-            foreign=pl.concat_list(
-                pl.selectors.starts_with("foreign"), pl.col("id_right")
-            ),
-            providers=pl.concat_list(
-                pl.selectors.starts_with("providers"), pl.col("provider_right")
+            old_foreign=pl.concat_list(pl.selectors.starts_with("foreign")),
+            new_foreign=pl.concat_list(
+                pl.struct(
+                    provider=pl.col("provider_right"),
+                    key=pl.col("id_right"),
+                    schema={
+                        "provider": pl.String(),
+                        "key": pl.String(),
+                    },
+                ).over("index_left")
             ),
         )
+        .with_columns(foreign=pl.concat_list("old_foreign", "new_foreign"))
         .select(
             pl.col("id_left").alias("id"),
             pl.col("id_right").alias("tmp"),
             pl.col("provider_left").alias("provider"),
-            *(
-                "classification",
-                "address",
-                "height",
-                "levels",
-                "foreign",
-                "providers",
-            ),
+            *("classification", "address", "height", "levels", "foreign"),
             pl.col("geometry_left").alias("geometry"),
         )
     )
@@ -201,7 +268,6 @@ def spatial_correspondence(
         "height",
         "levels",
         "foreign",
-        "providers",
         "geometry",
     )
 
@@ -222,10 +288,152 @@ def spatial_correspondence(
         right_on="tmp",
     )
 
+    intersected = intersected.drop("tmp")
+
     # Join all data frames together
     intersected = pl.concat(
-        (intersected.drop("tmp"), left_missing, right_missing),
+        (intersected, left_missing, right_missing),
         how="vertical",
     )
 
     return intersected
+
+
+def merge_footprints_and_addresses(
+    footprints: pl.LazyFrame, addresses: pl.LazyFrame
+) -> pl.LazyFrame:
+    # Left = Footprints
+    lhs = sc_initialize_lazy(footprints, JoinArgs(), "_left")
+    # Right = Addresses
+    rhs = sc_initialize_lazy(addresses, JoinArgs(), "_right")
+
+    merged = (
+        # Join footprint geometries onto addresses.
+        pl.concat((rhs, lhs.select("geometry_left")), how="horizontal")
+        .with_columns(
+            index_left=pl.col("geometry_right").pipe(
+                udf.nearest, pl.col("geometry_left")
+            )
+        )
+        .explode("index_left")
+        .drop("geometry_left")
+        .filter(pl.col("index_left").is_not_null())
+        .join(lhs, how="inner", on="index_left")
+        .filter(pl.col("index_left").is_not_null())
+        .pipe(
+            sc_correspond_distance,
+            pl.col("geometry_right"),
+            pl.col("geometry_left"),
+        )
+        .filter("corresponds")
+        .filter(pl.col("metric") == pl.col("metric").min().over("id_left"))
+        .drop("corresponds")
+        .with_columns(
+            classification=sc_coalesce_attr("classification"),
+            address=sc_coalesce_attr("address"),
+            height=sc_coalesce_attr("height"),
+            levels=sc_coalesce_attr("levels"),
+            old_foreign=pl.concat_list(pl.selectors.starts_with("foreign")),
+            new_foreign=pl.concat_list(
+                pl.struct(
+                    provider=pl.col("provider_left"),
+                    key=pl.col("id_left"),
+                    schema={
+                        "provider": pl.String(),
+                        "key": pl.String(),
+                    },
+                ).over("index_right")
+            ),
+        )
+        .with_columns(foreign=pl.concat_list("old_foreign", "new_foreign"))
+        .select(
+            pl.col("id_right").alias("id"),
+            pl.col("provider_right").alias("provider"),
+            pl.col("id_left").alias("footprint_id"),
+            pl.col("provider_left").alias("footprint_provider"),
+            *("classification", "address", "height", "levels", "foreign"),
+            # When the point is ON the footprint surface, we use that (i.e. units),
+            # otherwise, we use the footprint centroid (i.e. when address is in front of structure)
+            pl.when(pl.col("metric") == 0)
+            .then(pl.col("geometry_right"))
+            .otherwise(pl.col("geometry_left"))
+            .alias("geometry"),
+        )
+    )
+
+    select_cols = (
+        "id",
+        "provider",
+        "footprint_id",
+        "footprint_provider",
+        "classification",
+        "address",
+        "height",
+        "levels",
+        "foreign",
+        "geometry",
+    )
+
+    # Get unmatched rows from left data frame
+    footprints_missing = sc_anti_join(
+        footprints.with_columns(
+            footprint_id=pl.col("id"),
+            footprint_provider=pl.col("provider"),
+        ),
+        merged,
+        select_cols,
+        left_on="id",
+        right_on="footprint_id",
+    )  # TODO to centroid
+
+    # Get unmatched rows from right data frame
+    addresses_missing = sc_anti_join(
+        addresses.with_columns(
+            footprint_id=pl.lit(None),
+            footprint_provider=pl.lit(None),
+        ),
+        merged,
+        select_cols,
+        left_on="id",
+        right_on="id",
+    )
+
+    merged = (
+        pl.concat(
+            (merged, footprints_missing, addresses_missing),
+            how="vertical",
+        )
+        .with_columns(
+            address=pl.col("address")
+            .str.replace_all("\\s+dr$", " drive")
+            .str.replace_all("\\s+st$", " street")
+            .str.replace_all("\\s+ct$", " court")
+            .str.replace_all("\\s+ln$", " lane")
+            .str.replace_all("\\s+ave$", " avenue")
+            .str.replace_all("\\s+rd$", " road")
+            .map_elements(
+                addr_normalize,
+                return_dtype=pl.String(),
+            )
+        )
+        .with_columns(geometry=udf.centroid("geometry"))
+        .select(pl.all().first().over("address", order_by="provider"))
+        .unique(["id", "provider"])
+        .with_columns(
+            foreign=pl.concat_list(
+                pl.col("foreign"),
+                pl.concat_list(
+                    pl.struct(
+                        provider=pl.col("provider"),
+                        key=pl.col("id"),
+                        schema={
+                            "provider": pl.String(),
+                            "key": pl.String(),
+                        },
+                    )
+                ),
+            ),
+        )
+    )
+
+    return merged

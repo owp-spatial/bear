@@ -7,19 +7,28 @@ from polars._typing import IntoExpr
 PLUGIN_PATH = Path(__file__).parent.parent
 
 
-def intersection(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
+def intersects(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
-        function_name="intersection",
+        function_name="binary_intersects_aggregate",
         args=[lhs, rhs],
-        is_elementwise=True,
+        is_elementwise=False,
     )
 
 
-def distance(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
+def nearest(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
-        function_name="distance",
+        function_name="binary_nearest_aggregate",
+        args=[lhs, rhs],
+        is_elementwise=False,
+    )
+
+
+def intersection(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="binary_intersection_elementwise",
         args=[lhs, rhs],
         is_elementwise=True,
     )
@@ -28,25 +37,63 @@ def distance(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
 def area(expr: IntoExpr) -> Expr:
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
-        function_name="area",
+        function_name="unary_area_elementwise",
         args=expr,
         is_elementwise=True,
     )
 
 
-def intersects(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
+def distance(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
-        function_name="intersects",
+        function_name="binary_distance_elementwise",
         args=[lhs, rhs],
-        is_elementwise=False,
+        is_elementwise=True,
     )
 
 
-def corresponds(lhs: IntoExpr, rhs: IntoExpr) -> Expr:
+def centroid_x(expr: IntoExpr) -> Expr:
     return register_plugin_function(
         plugin_path=PLUGIN_PATH,
-        function_name="corresponds",
-        args=[lhs, rhs],
+        function_name="unary_x",
+        args=expr,
         is_elementwise=True,
+    )
+
+
+def centroid_y(expr: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="unary_y",
+        args=expr,
+        is_elementwise=True,
+    )
+
+
+def centroid(expr: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="unary_centroid",
+        args=expr,
+        is_elementwise=True,
+    )
+
+
+def explode_multipoint(expr: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="unary_explode_multipoint",
+        args=expr,
+        is_elementwise=True,
+        changes_length=True,
+    )
+
+
+def explode_multipolygon(expr: IntoExpr) -> Expr:
+    return register_plugin_function(
+        plugin_path=PLUGIN_PATH,
+        function_name="unary_explode_multipolygon",
+        args=expr,
+        is_elementwise=True,
+        changes_length=True,
     )
