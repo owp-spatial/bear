@@ -22,8 +22,8 @@ erDiagram
     CROSSREF zero or more to zero or one FOOTPRINTS : references
     CROSSREF {
         pluscode(13) entity_id PK
-        string footprint_provider FK
-        string footprint_id FK
+        string provider FK
+        string provider_id FK
     }
     ENTITIES {
         pluscode(13) id PK "13-length open location code identifier"

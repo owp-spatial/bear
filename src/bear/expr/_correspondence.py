@@ -384,7 +384,7 @@ def merge_footprints_and_addresses(
         select_cols,
         left_on="id",
         right_on="tmp",
-    )  # TODO to centroid
+    )
 
     # Get unmatched rows from right data frame
     addresses_missing = sc_anti_join(

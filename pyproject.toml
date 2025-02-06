@@ -24,6 +24,9 @@ dependencies = [
 Repository = "https://github.com/owp-spatial/bear"
 Issues = "https://github.com/owp-spatial/bear/issues"
 
+[project.scripts]
+bear = "bear.cli.entrypoint:cli"
+
 [tool.maturin]
 module-name = "bear._plugins"
 python-packages = ["bear"]
@@ -41,7 +44,8 @@ dev = [
     "ruff>=0.9.2",
 ]
 cli = [
-    "prefect>=3.1.13"
+    "prefect>=3.1.13",
+    "typer>=0.15.1",
 ]
 docs = [
     "markdown>=3.7",
